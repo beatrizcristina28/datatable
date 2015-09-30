@@ -3,17 +3,19 @@ package com.edupsousa.datatable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
+import javax.swing.JOptionPane;
+
 public class DataTable {
 
 	public static final int TYPE_INT = 0;
 	public static final int TYPE_STRING = 1;
-	
+
 	public static final int FORMAT_CSV = 0;
 	public static final int FORMAT_HTML = 1;
-	
+
 	private LinkedHashMap<String, Integer> columnsTypes = new LinkedHashMap<String, Integer>();
 	private ArrayList<DataTableRow> rows = new ArrayList<DataTableRow>();
-	
+
 	public int columnsCount() {
 		return columnsTypes.size();
 	}
@@ -46,7 +48,7 @@ public class DataTable {
 	public int getCollumnType(String collumn) {
 		return columnsTypes.get(collumn);
 	}
-	
+
 	private void checkRowCompatibilityAndThrows(DataTableRow row) {
 		for (String collumnName : columnsTypes.keySet()) {
 			if (row.hasValueFor(collumnName) && 
@@ -55,7 +57,7 @@ public class DataTable {
 			}
 		}
 	}
-	
+
 	private boolean isValueCompatible(int type, Object value) {
 		if (type == this.TYPE_INT && !(value instanceof Integer)) {
 			return false;
@@ -70,37 +72,84 @@ public class DataTable {
 	}
 
 	public String export(int format) {
-		DataTableRow row;
-		String output = "";
-		if (format == DataTable.FORMAT_CSV) {
-			for (String collumnName : columnsTypes.keySet()) {
-				output += collumnName + ";";
-			}
-			output += "\n";
-			for (int i = 0; i < this.rowsCount(); i++) {
-				row = this.getRow(i);
-				for (String collumnName : columnsTypes.keySet()) {
-					if (columnsTypes.get(collumnName) == DataTable.TYPE_STRING) {
-						output += "\"" + row.getValue(collumnName) + "\";";
-					} else {
-						output += row.getValue(collumnName) + ";";
-					}
-				}
-				output += "\n";
-			}
+		if (format==FORMAT_HTML) {
+			ExportHTML html = new ExportHTML();
+			return html.export(this, columnsTypes);
+		}else {
+			ExportCSV csv= new ExportCSV();
+			return csv.export(this, columnsTypes);
 		}
-		return output;
 	}
-	
+
 	public void insertRowAt(DataTableRow row, int index) {
 		rows.add(index, row);
 	}
-	
-	public DataTable filterEqual(String collumn, Object value) {
-		return null;
+
+	public DataTable sortAscending(String collumn) {
+		if (columnsTypes.get(collumn) != TYPE_INT) {
+			throw new ClassCastException("Only Integer columns can be sorted.");
+		}
+		for (int i = 0; i < rows.size(); i++) {
+			for (int j = 0; j < rows.size()-1; j++) {
+				if ((int)rows.get(j).getValue(collumn)>(int)rows.get(j+1).getValue(collumn)) {
+					changePositions(j);
+				}
+			}
+		}
+		return this;
+	}
+
+	public DataTable sortDescending(String collumn) {
+		if (columnsTypes.get(collumn) != TYPE_INT) {
+			throw new ClassCastException("Only Integer columns can be sorted.");
+		}
+		for (int i = 0; i < rows.size(); i++) {
+			for (int j = 0; j < rows.size()-1; j++) {
+				if ((int)rows.get(j).getValue(collumn)<(int)rows.get(j+1).getValue(collumn)) {
+					changePositions(j);
+				}
+			}
+		}
+		return this;
 	}
 	
-	public DataTable sortAscending(String collumn) {
-		return null;
+	//Troca de posição os elementos de rows para realizar a ordenação
+	public void changePositions(int j){
+		DataTableRow maior = rows.get(j);
+		DataTableRow menor = rows.get(j+1);
+		rows.remove(j);
+		rows.remove(j);
+		rows.add(j,maior);
+		rows.add(j,menor);
+	}
+
+	public DataTable filterEqual(String collumn, Object value) {
+		for (int i = 0; i < rows.size(); i++) {
+			if(columnsTypes.get(collumn) == TYPE_INT){
+				if (rows.get(i).getValue(collumn) != value) {
+					rows.remove(i);
+				}
+			}else if (columnsTypes.get(collumn) == TYPE_STRING){
+				if (!rows.get(i).getValue(collumn).equals(value)) {
+					rows.remove(i);
+				}
+			}		
+		}		
+		return this; 
+	}
+
+	public DataTable filterNotEqual(String collumn, Object value) {
+		for (int i = 0; i < rows.size(); i++) {
+			if(columnsTypes.get(collumn) == TYPE_INT){
+				if (rows.get(i).getValue(collumn) == value) {
+					rows.remove(i);
+				}
+			}else if (columnsTypes.get(collumn) == TYPE_STRING){
+				if (rows.get(i).getValue(collumn).equals(value)) {
+					rows.remove(i);
+				}
+			}		
+		}
+		return this;
 	}
 }
